@@ -1,0 +1,10 @@
+changes from v2
+implemented the book keeping method
+
+changes from v3
+changed the method of book keeping method
+to track the relative distance from the reference position,
+the position of particle when list was refreshed.
+
+changes from v4
+changed the walls to use triangle mesh

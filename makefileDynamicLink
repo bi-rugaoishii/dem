@@ -1,0 +1,17 @@
+CC = g++
+NAME = libmylib.so
+CFLAGS =-shared -fPIC -O3  -g -mtune=native -march=native
+LIBS = -lm
+SRCS =   particleGroup.cpp demCalc.cpp readFiles.cpp particle.cpp boundingBox.cpp triangles.cpp fileOutput.cpp timeAdvTest.cpp
+OBJS = $(SRCS:.cpp=.o)
+
+all: $(NAME)
+
+$(NAME): $(OBJS)
+	ar rc $(NAME) $(OBJS)
+
+.cpp.o:
+	$(CC) $(CFLAGS) $(LIBS) -c $< -o $@
+
+clean: 
+	rm -f $(OBJS) $(NAME)
