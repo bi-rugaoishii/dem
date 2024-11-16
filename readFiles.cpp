@@ -12,6 +12,7 @@ triangles readFiles::readStl(std::string filename){
 
     if (!ifs){
         std::cout << "geometry doesn't exists" << std::endl;
+        std::abort();
     }
 
     int numTriangles = 0;
