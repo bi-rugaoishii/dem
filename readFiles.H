@@ -8,6 +8,8 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <boost/format.hpp>
+#include "picojson.h"
 
 class readFiles{
     public:
@@ -21,6 +23,7 @@ class readFiles{
         double dt,startTime,endTime,outputTiming,wallAmp,refreshFreq;
         double boxXmin,boxXmax,boxYmin,boxYmax,boxZmin,boxZmax;
         double shuffleXmin,shuffleXmax,shuffleYmin,shuffleYmax,shuffleZmin,shuffleZmax;
+        picojson::object particleTypes;
 
         int numPart,seed, numWalls, numParticleTypes;
 };

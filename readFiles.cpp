@@ -56,69 +56,62 @@ triangles readFiles::readStl(std::string filename){
     return walls;
 }
 void readFiles::readSetting(){
-    std::ifstream ifs("demSettings.txt");
+    std::ifstream ifs("demSettings.json");
 
     
     
     if (!ifs){
-        std::cout << " demSettings.txt does not exist!!!" << std::endl;
-        std::cout << " demSettings.txt does not exist!!!" << std::endl;
-        std::cout << " demSettings.txt does not exist!!!" << std::endl;
-        std::cout << " demSettings.txt does not exist!!!" << std::endl;
+        std::cout << " demSettings.json does not exist!!!" << std::endl;
+        std::cout << " demSettings.json does not exist!!!" << std::endl;
+        std::cout << " demSettings.json does not exist!!!" << std::endl;
+        std::cout << " demSettings.json does not exist!!!" << std::endl;
+        std::abort();
     }
     
+    picojson::value settings;
     std::string str;
+    ifs >> settings;
+    ifs.close(); 
+    
     double tmpNum;
     int numColumns;
 
-    while (ifs >> str){
-        
-        if (str == "boundingBox"){
-            std::cout << "str was boundingBox" << std::endl;
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore {
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore #
-            ifs >> boxXmin >> boxXmax  >> boxYmin  >> boxYmax >> boxZmin >> boxZmax;
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore }
-        }else if(str == "shuffle"){
-            std::cout << "str was shuffle" << std::endl;
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore {
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore #
-            ifs >> shuffleXmin >> shuffleXmax  >> shuffleYmin  >> shuffleYmax >> shuffleZmin >> shuffleZmax;
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore }
-        }else if (str == "others"){
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore {
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore #
-            ifs >> numPart >> seed >> dt >> startTime >> endTime >> outputTiming >> wallAmp >> refreshFreq;
-            std::cout << "numparticle is " << numPart << std::endl;
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore }
-        }else if (str == "particleTypes"){
-            numColumns = 5;
-            ifs >> numParticleTypes;
-            std::cout << "numparticleTypes is " << numParticleTypes << std::endl;
-            particles = std::vector<double>(numWalls*numColumns);
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore {
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore #
+    //gather all the objects
+    picojson::object settingObjects = settings.get<picojson::object>();
 
-            for (int i=0 ; i<numParticleTypes; i++){
-                for (int j=0; j<numColumns; j++){
-                    ifs >> particles[index(i,j,numColumns)];
-                }
-            }
+    picojson::object boundingBox = settingObjects["boundingBox"].get<picojson::object>();
 
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //go to the next line
-            ifs.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); //ignore }
 
-        }
-    }
-    
-    
+    boxXmin = boundingBox["Xmin"].get<double>();
+    boxYmin = boundingBox["Ymin"].get<double>();
+    boxZmin = boundingBox["Zmin"].get<double>();
+    boxXmax = boundingBox["Xmax"].get<double>();
+    boxYmax = boundingBox["Ymax"].get<double>();
+    boxZmax = boundingBox["Zmax"].get<double>();
+
+    picojson::object others = settingObjects["others"].get<picojson::object>();
+
+
+    numPart = others["numPart"].get<double>(); 
+    seed = static_cast<int>(others["seed"].get<double>()); 
+    dt = others["dt"].get<double>(); 
+    startTime = others["startTime"].get<double>(); 
+    endTime = others["endTime"].get<double>(); 
+    outputTiming = others["outputTiming"].get<double>(); 
+    wallAmp = others["wallAmp"].get<double>(); 
+    refreshFreq = others["refreshFreq"].get<double>(); 
+
+    picojson::object shuffle = settingObjects["shuffle"].get<picojson::object>();
+    shuffleXmin = shuffle["Xmin"].get<double>();
+    shuffleYmin = shuffle["Ymin"].get<double>();
+    shuffleZmin = shuffle["Zmin"].get<double>();
+    shuffleXmax = shuffle["Xmax"].get<double>();
+    shuffleYmax = shuffle["Ymax"].get<double>();
+    shuffleZmax = shuffle["Zmax"].get<double>();
+
+    std::cout << boost::format("numparticle is %d")%numPart << std::endl;
+
+   particleTypes = settingObjects["particleTypes"].get<picojson::object>();
 
     ifs.close();
     std::cout << "Reading done"<< std::endl;

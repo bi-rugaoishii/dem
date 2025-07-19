@@ -94,6 +94,11 @@ void demCalc::getAcc(double dt){
                     //normal force
                     normal = this->getNorm(particles_,p1Ind,p2Ind,dist);
                     delta = this->getDelta(normal,particles_,p1Ind,p2Ind,dist);
+                    //check overlap
+                    if (delta.norm()/particles_.radius()(p1Ind) > 0.1){
+                        std::cout << "particle overlap over 10 %!!!!!!" << std::endl;
+                    }
+
                     //std::cout << "normal = " << delta(0) << " " << delta(1) <<" "<<delta(2) << std::endl;
                     vn = this->getvn(normal,particles_,p1Ind,p2Ind);
                     // std::cout << "vn = " << vn(0) << " " << vn(1) <<" "<<vn(2) << std::endl;

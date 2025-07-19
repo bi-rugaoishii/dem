@@ -1,5 +1,4 @@
 # current tasks
 
--glitches where with 50 particles setting, goes fucked
-
--change demSettings.txt to json
+-use cell method for triangles
+-erase out of bounds particles

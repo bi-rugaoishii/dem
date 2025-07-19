@@ -36,21 +36,22 @@ int main(){
     double maxRad = 0.;
 
 
-    double e = readFile.particles[index(0,2,5)];
-    double k = readFile.particles[index(0,3,5)];
-    double mu = readFile.particles[index(0,4,5)];
+    double e = readFile.particleTypes["particle1"].get<picojson::object>()["CoR"].get<double>();
+    //std::cout << "hello" << std::endl;
+    double k = readFile.particleTypes["particle1"].get<picojson::object>()["k"].get<double>();
+    double mu = readFile.particleTypes["particle1"].get<picojson::object>()["mu"].get<double>();
 
-    int numColumns;
     int numPart=readFile.numPart;
-    int numParticleTypes=readFile.numParticleTypes;
+    int numParticleTypes=readFile.particleTypes.size();
     std::vector<particle> particleTypes(numParticleTypes);
 
 
-    for (int i=0; i<numParticleTypes; i++){
-        numColumns = 5;
-        density = readFile.particles[index(i,0,numColumns)];
-        radius = readFile.particles[index(i,1,numColumns)];
+    int i = 0;
+    for (picojson::object::iterator p=readFile.particleTypes.begin(); p!= readFile.particleTypes.end(); p++){
+        density = p->second.get<picojson::object>()["density"].get<double>();
+        radius = p->second.get<picojson::object>()["radius"].get<double>();
         particleTypes[i] = particle(density, radius);
+        i++;
         /* find maximum Radius */
         if (maxRad < radius){
             maxRad = radius;
@@ -70,6 +71,11 @@ int main(){
     double eta = -2.*log(e)*sqrt(particleGroup1.mass()(0)*k/(pow(PI,2.)+pow(log(e),2.0)));
 
 
+    std::cout << "boxXmin boxXmax boxYmin boxYmax boxZmin boxZmax" << std::endl;
+    std::cout << readFile.boxXmin << " " << readFile.boxXmax << " " << readFile.boxYmin << " "<< readFile.boxYmax 
+        << " " << readFile.boxZmin << " " << readFile.boxZmax << std::endl;
+    std::cout <<std::endl;
+
 
     boundingBox box(readFile.boxXmin,readFile.boxXmax,readFile.boxYmin,readFile.boxYmax,readFile.boxZmin,readFile.boxZmax);
     box.showRange();
@@ -77,11 +83,6 @@ int main(){
     box.showSplit();
 
     std::cout << std::endl;
-    std::cout << "boxXmin boxXmax boxYmin boxYmax boxZmin boxZmax" << std::endl;
-    std::cout << readFile.boxXmin << " " << readFile.boxXmax << " " << readFile.boxYmin << " "<< readFile.boxYmax 
-        << " " << readFile.boxZmin << " " << readFile.boxZmax << std::endl;
-    std::cout <<std::endl;
-
     triangles walls;
     walls = readFile.readStl("geometry/box.stl");
     walls.getEdgeInfo();
