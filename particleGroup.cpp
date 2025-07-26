@@ -6,6 +6,7 @@
 #include <cmath>
 #include <string>
 #define PI 3.14159265359
+#define MAX_HISTORY_NEIGH 50
 #include "particleGroup.H"
 
 
@@ -45,34 +46,34 @@ particleGroup::particleGroup(double density, double radius,int numParticles){
     posRef.resize(dim,numParticles);
     posRef.setZero();
 
-    collisionHistory.resize(numParticles,50);
+    collisionHistory.resize(numParticles,MAX_HISTORY_NEIGH);
     collisionHistory.setZero();
 
-    collisionHistoryNew.resize(numParticles,50);
+    collisionHistoryNew.resize(numParticles,MAX_HISTORY_NEIGH);
     collisionHistoryNew.setZero();
 
 
-    deltatHistory.resize(dim,numParticles*50);
+    deltatHistory.resize(dim,numParticles*MAX_HISTORY_NEIGH);
     deltatHistory.setZero();
 
-    deltatHistoryNew.resize(dim,numParticles*50);
+    deltatHistoryNew.resize(dim,numParticles*MAX_HISTORY_NEIGH);
     deltatHistoryNew.setZero();
 
-    collisionHistoryWall.resize(numParticles,50);
+    collisionHistoryWall.resize(numParticles,MAX_HISTORY_NEIGH);
     collisionHistoryWall.setZero();
     
-    collisionHistoryNewWall.resize(numParticles,50);
+    collisionHistoryNewWall.resize(numParticles,MAX_HISTORY_NEIGH);
     collisionHistoryNewWall.setZero();
 
-    deltatHistoryWall.resize(dim,numParticles*50);
+    deltatHistoryWall.resize(dim,numParticles*MAX_HISTORY_NEIGH);
     deltatHistoryWall.setZero();
 
-    deltatHistoryNewWall.resize(dim,numParticles*50);
+    deltatHistoryNewWall.resize(dim,numParticles*MAX_HISTORY_NEIGH);
     deltatHistoryNewWall.setZero();
 
     distTravelled.resize(numParticles,1);
     distTravelled.setZero();
-    neighborList_.resize(numParticles,50);
+    neighborList_.resize(numParticles,MAX_HISTORY_NEIGH);
     neighborList_.setConstant(-1);
     numParticles_=numParticles;
 
