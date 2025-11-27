@@ -86,6 +86,7 @@ int main(){
     triangles walls;
     walls = readFile.readStl("geometry/box.stl");
     walls.getEdgeInfo();
+    box.trianglesIntersect(walls);
     std::cout << "Created " << walls.numTriangles << " walls." << std::endl;
     std::cout << std::endl;
     std::cout << "Normals are " << walls.fNormal.transpose() <<  std::endl;

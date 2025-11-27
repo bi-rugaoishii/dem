@@ -1,6 +1,11 @@
 #ifndef _boundingBox_H_
 #define _boundingBox_H_
 
+#include<vector>
+#include<Eigen/Dense>
+#include "triangles.H"
+#define DIM 3
+
 class boundingBox{
     public:
         boundingBox();
@@ -59,6 +64,9 @@ class boundingBox{
 
         void split(double maxRad);
 
+        std::vector<int> triangleList; //holds list of triangleId in a grid and first address contains the number of IDs
+
+        void trianglesIntersect(triangles &walls);
 
 
 

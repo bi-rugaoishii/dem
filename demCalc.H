@@ -216,7 +216,7 @@ class demCalc{
         inline void setRefreshFreq(double freq){
             refreshFreq_ = freq;
             refreshRadius_ = this->refreshFreq_*this->minDiam_;
-            refreshThreshold_ = this->refreshRadius_;
+            refreshThreshold_ = 0.5*this->refreshRadius_;
         }
 
         inline const double getRefreshThreshold() const{

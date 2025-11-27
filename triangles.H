@@ -23,6 +23,12 @@ class triangles{
         Eigen::Matrix3Xd fNormal;
         Eigen::Matrix3Xd eNormal; //normal of edge out of the triangle and is perpendicular to fNormal
         Eigen::Matrix3Xd collVorEHist;
+        std::vector<double> minX;
+        std::vector<double> minY;
+        std::vector<double> minZ;
+        std::vector<double> maxX;
+        std::vector<double> maxY;
+        std::vector<double> maxZ;
 
         void getEdgeInfo();
         Eigen::Vector3d getClosestPt(const Eigen::Vector3d &p, int wallInd);

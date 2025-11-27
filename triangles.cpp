@@ -4,7 +4,7 @@ triangles::triangles(){
 }
 
 
-triangles::triangles(int numTriangles){
+triangles::triangles(int const numTriangles){
     this->numTriangles=numTriangles;
     lengthSqInv.resize(numTriangles*numVertex,1);
     lengthSqInv.setZero();
@@ -20,6 +20,12 @@ triangles::triangles(int numTriangles){
     v.setZero();
     d.resize(numTriangles,1);
     d.setZero();
+    minX.resize(numTriangles,0.);
+    minY.resize(numTriangles,0.);
+    minZ.resize(numTriangles,0.);
+    maxX.resize(numTriangles,0.);
+    maxY.resize(numTriangles,0.);
+    maxZ.resize(numTriangles,0.);
 
     int numHistory = 10;
     collVorEHist.resize(3,numHistory);
@@ -92,6 +98,14 @@ void triangles::getEdgeInfo(){
         int ind1 = triInd*3+1;
         int ind2 = triInd*3+2;
 
+        
+        //make bounding box of the triangle
+        this->minX[triInd] = std::min({this->f.col(ind0)(0), this->f.col(ind1)(0),this->f.col(ind2)(0)});  
+        this->minY[triInd] = std::min({this->f.col(ind0)(1), this->f.col(ind1)(1),this->f.col(ind2)(1)});  
+        this->minZ[triInd] = std::min({this->f.col(ind0)(2), this->f.col(ind1)(2),this->f.col(ind2)(2)});  
+        this->maxX[triInd] = std::max({this->f.col(ind0)(0), this->f.col(ind1)(0),this->f.col(ind2)(0)});  
+        this->maxY[triInd] = std::max({this->f.col(ind0)(1), this->f.col(ind1)(1),this->f.col(ind2)(1)});  
+        this->maxZ[triInd] = std::max({this->f.col(ind0)(2), this->f.col(ind1)(2),this->f.col(ind2)(2)});  
 
         this->e.col(ind0) = this->f.col(ind1) - this->f.col(ind0);  
 
