@@ -1,13 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 #include <random>
 #include <cmath>
 #include <string>
 #include <boost/format.hpp>
 #define PI 3.14159265359
-#define NUM_MAX_TRIANGLE 10 //max number of possible triangle in a grid
+#define NUM_MAX_TRIANGLE 100 //max number of possible triangle in a grid
 #define NUM_VERTEX 3
 #include "boundingBox.H"
 #include <Eigen/Dense>
@@ -32,6 +33,8 @@ boundingBox::boundingBox(double minX, double maxX, double minY, double maxY,doub
         rangeZ_=maxZ_-minZ_;
         isSplit_ = false;
     }
+
+   this->num_max_triangle=NUM_MAX_TRIANGLE;
 } 
 
 void boundingBox::showRange(){
@@ -53,9 +56,9 @@ void boundingBox::split(double maxRad){
     if (maxDiam>=rangeX_ ||maxDiam>=rangeY_ || maxDiam>=rangeZ_){
         std::cout <<"radius is too big!" <<std::endl;
     }else{
-        dx_ = maxDiam*2.;
-        dy_ = maxDiam*2.;
-        dz_ = maxDiam*2.;
+        dx_ = maxDiam*4.;
+        dy_ = maxDiam*4.;
+        dz_ = maxDiam*4.;
 
         sizeSplitX_=ceil(rangeX_/dx_) + 2;
         sizeSplitY_=ceil(rangeY_/dy_) + 2;
@@ -152,13 +155,14 @@ void boundingBox::trianglesIntersect(triangles &walls){
                         //std::cout <<"collided!"<<std::endl;
                         int k=0;
                         int indCell=index(z,y,x,sizeSplitX_,sizeSplitY_);
-                        while(triangleList[indCell*NUM_MAX_TRIANGLE+k]!=-1){
+                        while(triangleList[indCell*this->num_max_triangle+k]!=-1){
                             k+=1;
                         }
-                        if (k<NUM_MAX_TRIANGLE){
-                            triangleList[indCell*NUM_MAX_TRIANGLE+k]=triangleInd;
+                        if (k<this->num_max_triangle){
+                            triangleList[indCell*this->num_max_triangle+k]=triangleInd;
                         }else{
                             std::cerr <<"TRIANGLE OVER FLOW IN CELL!!"<< indCell << std::endl;
+                            std::abort();
                         }
                     }
                 }

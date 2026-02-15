@@ -71,17 +71,17 @@ class demCalc{
             return delta;
         }
 
-        inline Eigen::Vector3d getNormalForce(const Eigen::Vector3d &delta_n,const  Eigen::Vector3d &vn){
+        inline Eigen::Vector3d getNormalForce(const Eigen::Vector3d &delta_n,const  Eigen::Vector3d &vn,const double eta){
             Eigen::Vector3d resVec = delta_n; //initialize
 
-            resVec = -k_*delta_n-eta_*vn;
+            resVec = -k_*delta_n-eta*vn;
             return resVec;
         }
 
-        inline Eigen::Vector3d getTangentialForce(const Eigen::Vector3d &delta_t, const Eigen::Vector3d &vt){
+        inline Eigen::Vector3d getTangentialForce(const Eigen::Vector3d &delta_t, const Eigen::Vector3d &vt,const double eta){
             Eigen::Vector3d resVec = delta_t; //initialize
 
-            resVec = -k_*delta_t - eta_*vt;
+            resVec = -k_*delta_t - eta*vt;
             return resVec;
         }
 
@@ -207,10 +207,12 @@ class demCalc{
             std::cout << "Linked list initialized" << std::endl;
         }
 
-        inline void setParameters(double k,double eta, double mu){
+        inline void setParameters(double k,double e, double mu, double dtFactor){
             k_ = k;
-            eta_ = eta;
+            eta_ = -2.*log(e)*sqrt(0.5*this->particles_.mass()(0)*k/(pow(PI,2.)+pow(log(e),2.0))); //assuming same mass for all particles
+            etaWall_ = -2.*log(e)*sqrt(this->particles_.mass()(0)*k/(pow(PI,2.)+pow(log(e),2.0)));
             mu_ = mu;
+            dt_ = sqrt(particles_.mass().maxCoeff()/k)/dtFactor;
         }
 
         inline void setRefreshFreq(double freq){
@@ -221,6 +223,10 @@ class demCalc{
 
         inline const double getRefreshThreshold() const{
             return refreshThreshold_;
+        }
+
+        inline const double getDt() const{
+            return dt_;
         }
 
         inline void gravity3D(double x,double y, double z){
@@ -240,6 +246,7 @@ class demCalc{
         double dt_;
         double k_;
         double eta_;
+        double etaWall_;
         double mu_;
         double boxDx_,boxDy_,boxDz_;
         double boxDxInv_,boxDyInv_,boxDzInv_;

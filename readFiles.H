@@ -20,7 +20,7 @@ class readFiles{
         std::vector<double> normal;
         std::vector<double> particles;
         double density, radius,cor,k,mu;
-        double dt,startTime,endTime,outputTiming,wallAmp,refreshFreq;
+        double dtFactor,startTime,endTime,outputTiming,wallAmp,refreshFreq;
         double boxXmin,boxXmax,boxYmin,boxYmax,boxZmin,boxZmax;
         double shuffleXmin,shuffleXmax,shuffleYmin,shuffleYmax,shuffleZmin,shuffleZmax;
         picojson::object particleTypes;

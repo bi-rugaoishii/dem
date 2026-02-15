@@ -3,7 +3,7 @@
         "Xmin": -0.2,
         "Xmax": 0.2,
         "Ymin":-0.5,
-        "Ymax":0.5,
+        "Ymax":0.8,
         "Zmin":-0.2,
         "Zmax":0.2
     },
@@ -11,8 +11,8 @@
     "shuffle":{
         "Xmin":-0.2,
         "Xmax": 0.2,
-        "Ymin":-0.5,
-        "Ymax":0.5,
+        "Ymin":0.5,
+        "Ymax":0.8,
         "Zmin":-0.2,
         "Zmax":0.2
     },
@@ -20,21 +20,21 @@
     "particleTypes":{
         "particle1":{
             "density":1000.,
-            "radius":0.03,
+            "radius":0.02,
             "CoR":0.3,
             "k":1.0e6,
             "mu":0.3
         }
     },
     "others":{
-        "numPart":100,
+        "numPart":200,
         "seed":1,
-        "dt":1e-4,
+        "dtFactor":15,
         "startTime":0,
-        "endTime":20.,
+        "endTime":10,
         "outputTiming":0.02,
         "wallAmp":0.0,
-        "refreshFreq":0.5
+        "refreshFreq":1.0
     }
 }
 

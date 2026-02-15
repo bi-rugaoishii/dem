@@ -68,6 +68,7 @@ class boundingBox{
 
         void trianglesIntersect(triangles &walls);
 
+        int num_max_triangle;
 
 
 

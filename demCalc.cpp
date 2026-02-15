@@ -9,7 +9,6 @@
 #define smallNum 1.e-16
 #define MAX_HISTORY_NEIGH 50
 #define MAX_WALL_EorV_HISTORY 10
-#define NUM_MAX_TRIANGLE 10
 
 demCalc::demCalc(){}
 demCalc::demCalc(boundingBox &box,particleGroup &particles){
@@ -108,7 +107,7 @@ void demCalc::getAcc(double dt){
                     //std::cout << "normal = " << delta(0) << " " << delta(1) <<" "<<delta(2) << std::endl;
                     vn = this->getvn(normal,particles_,p1Ind,p2Ind);
                     // std::cout << "vn = " << vn(0) << " " << vn(1) <<" "<<vn(2) << std::endl;
-                    fn = this->getNormalForce(delta,vn);
+                    fn = this->getNormalForce(delta,vn,this->eta_);
                     particles_.acc.col(p1Ind)= particles_.acc.col(p1Ind) + fn;
 
                     //std::cout << "fn = " << fn(0) << " " << fn(1) <<" "<<fn(2) << std::endl;
@@ -149,7 +148,7 @@ void demCalc::getAcc(double dt){
                     }
 
 
-                    ft = this->getTangentialForce(deltat,vt);
+                    ft = this->getTangentialForce(deltat,vt,this->eta_);
                     ftNorm = ft.norm();
                     fnNorm = fn.norm();
 
@@ -197,7 +196,7 @@ void demCalc::getAcc(double dt){
             //this->getWriteWall().numCollVorE=0;
             int numCollVorE=0;
             Eigen::Matrix3Xd collVorEHist(3,MAX_WALL_EorV_HISTORY); //3 is dimension. Memory allocated here to avoid parallization conflict. Maybe include it as particleGroupMember?
-            std::vector<int> histCollWall(NUM_MAX_TRIANGLE,-1); //Memory allocated here to avoid parallization conflict. Maybe include it as particleGroupMember?
+            std::vector<int> histCollWall(box_.num_max_triangle,-1); //Memory allocated here to avoid parallization conflict. Maybe include it as particleGroupMember?
             collVorEHist.setZero();
             int countHitWall=0;
 
@@ -211,7 +210,7 @@ void demCalc::getAcc(double dt){
                         int cellInd = index(z,y,x,box_.sizeSplitX(),box_.sizeSplitY());
                         int wallCountInCell = 0;
                         //get walls in neighborlist
-                        int wallInd = box_.triangleList[cellInd*NUM_MAX_TRIANGLE+wallCountInCell];
+                        int wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell];
                         //std::cout << "wallInd is " << wallInd<< std::endl;
                             while(wallInd!=-1){
                                 bool hasCollidedWithTheWallBefore=false;
@@ -225,7 +224,7 @@ void demCalc::getAcc(double dt){
                                 if(hasCollidedWithTheWallBefore == true){
                                     //std::cout <<"continue "<< std::endl;
                                     wallCountInCell+=1;
-                                    wallInd = box_.triangleList[cellInd*NUM_MAX_TRIANGLE+wallCountInCell]  ;//check next wall in cell
+                                    wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell]  ;//check next wall in cell
                                     //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
                                     continue;
                                 }
@@ -256,7 +255,7 @@ void demCalc::getAcc(double dt){
                                     if(hasCollidedBeforeVorE == true){
                                         //std::cout <<"continue "<< std::endl;
                                         wallCountInCell+=1;
-                                        wallInd = box_.triangleList[cellInd*NUM_MAX_TRIANGLE+wallCountInCell]  ;
+                                        wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell]  ;
                                         //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
                                         continue;
                                     }
@@ -275,7 +274,7 @@ void demCalc::getAcc(double dt){
                                     normal.normalize();
                                     delta = this->getDelta(normal,particle,p1Ind,walls,wallInd,dist);
                                     vn = this->getvn(normal,particle,p1Ind,walls,wallInd);
-                                    fn = this->getNormalForce(delta,vn);
+                                    fn = this->getNormalForce(delta,vn,this->etaWall_);
 
                                     //will be divided by mass later
                                     particles_.acc.col(p1Ind) = particles_.acc.col(p1Ind) + fn;
@@ -315,7 +314,7 @@ void demCalc::getAcc(double dt){
                                     }
 
 
-                                    ft = this->getTangentialForce(deltat,vt);
+                                    ft = this->getTangentialForce(deltat,vt,this->etaWall_);
 
 
                                     ftNorm = ft.norm();
@@ -348,7 +347,7 @@ void demCalc::getAcc(double dt){
 
                                 }
                                 wallCountInCell+=1;
-                                wallInd = box_.triangleList[cellInd*NUM_MAX_TRIANGLE+wallCountInCell];// check next wall in cell
+                                wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell];// check next wall in cell
                                 //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
                             }
                     }
@@ -552,11 +551,16 @@ void demCalc::refreshLinkedList(){
         if (cellIniPart_[ind] == -1){
             cellIniPart_[ind] = i;
         }else{
+            /*
             indLast = cellIniPart_[ind];
             while (linkedList_[indLast]!=-1){
                 indLast = linkedList_[indLast];
             }
             linkedList_[indLast] = i;
+            */
+
+            linkedList_[i] = cellIniPart_[ind];
+            cellIniPart_[ind]=i;
         }
     }
 

@@ -26,7 +26,6 @@ int main(){
     readFile.readSetting();
     
     int seed = readFile.seed;
-    double dt = readFile.dt;
     double startTime = readFile.startTime;
     double wallAmp = readFile.wallAmp;
     double endTime = readFile.endTime;
@@ -67,9 +66,6 @@ int main(){
     std::cout << "mass = " << particleGroup1.mass()(0) << std::endl;
     std::cout << "moi = " << particleGroup1.moi()(0) << std::endl;
 
-    //calculate eta from coeff of res
-    double eta = -2.*log(e)*sqrt(particleGroup1.mass()(0)*k/(pow(PI,2.)+pow(log(e),2.0)));
-
 
     std::cout << "boxXmin boxXmax boxYmin boxYmax boxZmin boxZmax" << std::endl;
     std::cout << readFile.boxXmin << " " << readFile.boxXmax << " " << readFile.boxYmin << " "<< readFile.boxYmax 
@@ -94,7 +90,7 @@ int main(){
     
     std::cout << "eNormals are " << walls.eNormal.transpose() <<  std::endl;
 
-    std::cout << "NumParticleTypes is " << readFile.numParticleTypes << std::endl;
+    std::cout << "NumParticleTypes is " << numParticleTypes << std::endl;
 
     demCalc demCalc1(box,particleGroup1,walls);
     demCalc1.setRefreshFreq(readFile.refreshFreq);
@@ -114,9 +110,6 @@ int main(){
     }
     */
 
-    std::cout << "numPart seed dt startTime endTime outputTiming" << std::endl;
-    std::cout << readFile.numPart << " " << readFile.seed << " " << readFile.dt << " " 
-        << readFile.startTime << " " << readFile.endTime << " " << readFile.outputTiming << std::endl;
 
 
     //demCalc1.getParticleInCellList();
@@ -134,12 +127,16 @@ int main(){
 
     demCalc1.gravity3D(0.,-9.81,0.); //sets gravity
 
-    demCalc1.setParameters(k,eta,mu);
+    demCalc1.setParameters(k,e,mu,readFile.dtFactor);
+
+    std::cout << "numPart seed dt startTime endTime outputTiming" << std::endl;
+    std::cout << readFile.numPart << " " << readFile.seed << " " << demCalc1.getDt() << " " 
+        << readFile.startTime << " " << readFile.endTime << " " << readFile.outputTiming << std::endl;
 
     fileOutput output;
     output.createResultDirectory();
 
-    timeAdvTest timeAdv(dt,startTime,endTime,outputTiming,wallAmp,start);
+    timeAdvTest timeAdv(demCalc1.getDt(),startTime,endTime,outputTiming,wallAmp,start);
 
     // time advancement// 
 

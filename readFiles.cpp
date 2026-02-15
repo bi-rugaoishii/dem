@@ -94,7 +94,7 @@ void readFiles::readSetting(){
 
     numPart = others["numPart"].get<double>(); 
     seed = static_cast<int>(others["seed"].get<double>()); 
-    dt = others["dt"].get<double>(); 
+    dtFactor = others["dtFactor"].get<double>(); 
     startTime = others["startTime"].get<double>(); 
     endTime = others["endTime"].get<double>(); 
     outputTiming = others["outputTiming"].get<double>(); 
