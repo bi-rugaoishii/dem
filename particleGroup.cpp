@@ -52,6 +52,11 @@ particleGroup::particleGroup(double density, double radius,int numParticles){
     collisionHistoryNew.resize(numParticles,MAX_HISTORY_NEIGH);
     collisionHistoryNew.setZero();
 
+    collisionFlag.resize(numParticles,MAX_HISTORY_NEIGH);
+    collisionFlag.setZero();
+
+    collisionFlagWall.resize(numParticles,MAX_HISTORY_NEIGH);
+    collisionFlagWall.setZero();
 
     deltatHistory.resize(dim,numParticles*MAX_HISTORY_NEIGH);
     deltatHistory.setZero();

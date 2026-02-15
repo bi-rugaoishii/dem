@@ -66,19 +66,21 @@ void demCalc::getAcc(double dt){
 
     particleGroup const &particle = this->getParticle();
     triangles const &walls = this->getWall();
-    const Eigen::MatrixXd &tmpDeltat = particles_.getDeltatHistory();
+
+    //initialize history related arrays
+    particles_.collisionFlag.setZero();
+    particles_.collisionFlagWall.setZero();
+
     #pragma omp parallel
     {
         #pragma omp for private(ind,dist,hasCollidedBefore,indHistory,normal,delta,vn,fn,vt,vtNorm,deltatOldNorm,deltat,ft,ftNorm,fnNorm,mom,tangentialUnit,wallInd,closestPt,hasCollidedVorE)
         for (int i=0; i<numPart; i++){
-            //initialize history related arrays
 
 
 
 
             int const p1Ind = i;
             int nInd = 0;
-            int newIndHistory=0;
 
             ind = particle.getNeighborList()(p1Ind, nInd);
             //get particles in neighboring cells
@@ -123,28 +125,32 @@ void demCalc::getAcc(double dt){
                     hasCollidedBefore = false;
                     indHistory = -1;
 
+                    //check if particle was previously in contact
                     for (int j=0; j<particles_.getNumCollisionHistory()(p1Ind); j++){
                         if (particles_.collisionHistory(p1Ind,j) == p2Ind){
                             indHistory=j;
-                            deltatOldNorm = tmpDeltat.col(p1Ind*MAX_HISTORY_NEIGH+indHistory).norm();
+                            deltatOldNorm = particles_.deltatHistory.col(p1Ind*MAX_HISTORY_NEIGH+indHistory).norm();
                             tangentialUnit = vt/(vtNorm+smallNum);
                             deltat = tangentialUnit*deltatOldNorm;
                             deltat = deltat+vt*dt;
 
-                            particles_.deltatHistoryNew.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory)=deltat;
-                            particles_.collisionHistoryNew(p1Ind*MAX_HISTORY_NEIGH+newIndHistory) = p2Ind;
-                            newIndHistory += 1;
+                            particles_.deltatHistory.col(p1Ind*MAX_HISTORY_NEIGH+indHistory)=deltat;
+                            particles_.collisionFlag(p1Ind*MAX_HISTORY_NEIGH+indHistory) = 1;
                             hasCollidedBefore = true;
                             break;
                         }
                     }
 
+                    //if new particle contact
                     if (hasCollidedBefore == false){
                         deltat = vt*dt;
                         tangentialUnit = vt/(vtNorm+smallNum);
-                        particles_.deltatHistoryNew.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory)=deltat;
-                        particles_.collisionHistoryNew(p1Ind*MAX_HISTORY_NEIGH+newIndHistory) = p2Ind;
-                        newIndHistory += 1;
+
+                        int newInd = particles_.getNumCollisionHistory()(p1Ind);
+                        particles_.deltatHistory.col(p1Ind*MAX_HISTORY_NEIGH+newInd)=deltat;
+                        particles_.collisionHistory(p1Ind*MAX_HISTORY_NEIGH+newInd) = p2Ind;
+                        particles_.collisionFlag(p1Ind*MAX_HISTORY_NEIGH+newInd) = 1;
+                        particles_.numCollisionHistory(p1Ind)+=1;
                     }
 
 
@@ -154,10 +160,9 @@ void demCalc::getAcc(double dt){
 
                     if (ftNorm > mu_*fnNorm){
                         if (hasCollidedBefore == true){
-                            particles_.deltatHistoryNew.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory-1)=tmpDeltat.col(p1Ind*MAX_HISTORY_NEIGH+indHistory);
                             ft = -mu_*fnNorm*tangentialUnit;
                         }else{
-                            particles_.deltatHistoryNew.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory-1)=zeroVec;
+                            particles_.deltatHistory.col(p1Ind*MAX_HISTORY_NEIGH+particles_.getNumCollisionHistory()(p1Ind)-1)=zeroVec;
                             ft = -mu_*fnNorm*tangentialUnit;
                         }
                     }
@@ -185,13 +190,11 @@ void demCalc::getAcc(double dt){
                 ind = particle.getNeighborList()(p1Ind, nInd);
             }//done particle collisions
 
-            particles_.numCollisionHistory(p1Ind) = newIndHistory;
 
 
 
             //check for wall collisions
 
-            newIndHistory = 0;
             const Eigen::MatrixXd &tmpDeltatWall = particles_.getDeltatHistoryWall();
             //this->getWriteWall().numCollVorE=0;
             int numCollVorE=0;
@@ -212,151 +215,148 @@ void demCalc::getAcc(double dt){
                         //get walls in neighborlist
                         int wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell];
                         //std::cout << "wallInd is " << wallInd<< std::endl;
-                            while(wallInd!=-1){
-                                bool hasCollidedWithTheWallBefore=false;
-                                for (int wallCounter =0; wallCounter<countHitWall; wallCounter++){
-                                    if(histCollWall[wallCounter]==wallInd){
-                                        hasCollidedWithTheWallBefore=true;
-                                        break;
-                                           // std::cout << "was hit before!" << std::endl;
+                        while(wallInd!=-1){
+                            bool hasCollidedWithTheWallBefore=false;
+                            for (int wallCounter =0; wallCounter<countHitWall; wallCounter++){
+                                if(histCollWall[wallCounter]==wallInd){
+                                    hasCollidedWithTheWallBefore=true;
+                                    break;
+                                    // std::cout << "was hit before!" << std::endl;
+                                }
+                            }
+                            if(hasCollidedWithTheWallBefore == true){
+                                //std::cout <<"continue "<< std::endl;
+                                wallCountInCell+=1;
+                                wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell]  ;//check next wall in cell
+                                                                                                             //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
+                                continue;
+                            }
+                            const Eigen::Vector3d &particle1Pos = particles_.getPos().col(p1Ind);
+                            closestPt = this->getWriteWall().getClosestPt(particle1Pos,wallInd);
+                            //std::cout << hasCollidedVorE << std::endl;
+
+
+                            normal = particle1Pos-closestPt; //will be normalized later
+                            double distSq = (normal).squaredNorm();
+                            if (distSq < particle.radiusSq()(p1Ind)){
+                                //was Hit
+                                histCollWall[countHitWall]=wallInd;
+                                countHitWall +=1;
+
+
+                                //check if the closestPt is double counting
+                                bool hasCollidedBeforeVorE = false;
+                                for (int k = 0; k<numCollVorE; k++){
+                                    double distSqVorE = (closestPt - collVorEHist.col(k)).squaredNorm();
+                                    //                    std::cout << "distSqVorE was " << distSqVorE << std::endl;
+                                    if(distSqVorE <smallNum){
+                                        std::cout << "had repetition!" << std::endl;
+                                        hasCollidedBeforeVorE = true;
+                                        continue;
                                     }
                                 }
-                                if(hasCollidedWithTheWallBefore == true){
+                                if(hasCollidedBeforeVorE == true){
                                     //std::cout <<"continue "<< std::endl;
                                     wallCountInCell+=1;
-                                    wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell]  ;//check next wall in cell
+                                    wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell]  ;
                                     //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
                                     continue;
                                 }
-                                const Eigen::Vector3d &particle1Pos = particles_.getPos().col(p1Ind);
-                                closestPt = this->getWriteWall().getClosestPt(particle1Pos,wallInd);
-                                //std::cout << hasCollidedVorE << std::endl;
+                                collVorEHist.col(numCollVorE) = closestPt;
+                                numCollVorE += 1;
+                                //this->getWriteWall().numCollVorE += 1;
+                                /*
+                                   std::cout << "wallNum is " << wallInd << std::endl;
+                                   std::cout << "particlePos is " << particle1Pos.transpose() << std::endl;
+                                   std::cout << "closestPt is " << closestPt.transpose() << std::endl;
+                                   std::cout <<  std::endl;
+                                   */
+
+                                dist = sqrt(distSq);
+                                //normal force
+                                normal.normalize();
+                                delta = this->getDelta(normal,particle,p1Ind,walls,wallInd,dist);
+                                vn = this->getvn(normal,particle,p1Ind,walls,wallInd);
+                                fn = this->getNormalForce(delta,vn,this->etaWall_);
+
+                                //will be divided by mass later
+                                particles_.acc.col(p1Ind) = particles_.acc.col(p1Ind) + fn;
+
+                                //tangential Force Calculation
+                                vt = this->getvt(vn,normal,particles_,p1Ind,walls, wallInd);
+
+                                //write in the history and get tangential displacement
+                                //get tangential displacement
 
 
-                                normal = particle1Pos-closestPt; //will be normalized later
-                                double distSq = (normal).squaredNorm();
-                                if (distSq < particle.radiusSq()(p1Ind)){
-                                    //was Hit
-                                    histCollWall[countHitWall]=wallInd;
-                                    countHitWall +=1;
-
-
-                                    //check if the closestPt is double counting
-                                    bool hasCollidedBeforeVorE = false;
-                                    for (int k = 0; k<numCollVorE; k++){
-                                        double distSqVorE = (closestPt - collVorEHist.col(k)).squaredNorm();
-                                        //                    std::cout << "distSqVorE was " << distSqVorE << std::endl;
-                                        if(distSqVorE <smallNum){
-                                            std::cout << "had repetition!" << std::endl;
-                                            hasCollidedBeforeVorE = true;
-                                            continue;
-                                        }
-                                    }
-                                    if(hasCollidedBeforeVorE == true){
-                                        //std::cout <<"continue "<< std::endl;
-                                        wallCountInCell+=1;
-                                        wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell]  ;
-                                        //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
-                                        continue;
-                                    }
-                                    collVorEHist.col(numCollVorE) = closestPt;
-                                    numCollVorE += 1;
-                                    //this->getWriteWall().numCollVorE += 1;
-                                    /*
-                                       std::cout << "wallNum is " << wallInd << std::endl;
-                                       std::cout << "particlePos is " << particle1Pos.transpose() << std::endl;
-                                       std::cout << "closestPt is " << closestPt.transpose() << std::endl;
-                                       std::cout <<  std::endl;
-                                       */
-
-                                    dist = sqrt(distSq);
-                                    //normal force
-                                    normal.normalize();
-                                    delta = this->getDelta(normal,particle,p1Ind,walls,wallInd,dist);
-                                    vn = this->getvn(normal,particle,p1Ind,walls,wallInd);
-                                    fn = this->getNormalForce(delta,vn,this->etaWall_);
-
-                                    //will be divided by mass later
-                                    particles_.acc.col(p1Ind) = particles_.acc.col(p1Ind) + fn;
-
-                                    //tangential Force Calculation
-                                    vt = this->getvt(vn,normal,particles_,p1Ind,walls, wallInd);
-
-                                    //write in the history and get tangential displacement
-                                    //get tangential displacement
-
-
-                                    vtNorm = vt.norm();
-                                    hasCollidedBefore = false;
-                                    indHistory = -1;
-                                    for (int j=0; j<particles_.numCollisionHistoryWall(p1Ind); j++){
-                                        if (particles_.collisionHistoryWall(p1Ind,j) == wallInd){
-                                            indHistory=j;
-                                            deltatOldNorm = tmpDeltatWall.col(p1Ind*MAX_HISTORY_NEIGH+indHistory).norm();
-                                            tangentialUnit = vt/(vtNorm+smallNum);
-                                            deltat = tangentialUnit*deltatOldNorm;
-                                            deltat = deltat+vt*dt;
-
-                                            particles_.deltatHistoryNewWall.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory)=deltat;
-                                            particles_.collisionHistoryNewWall(p1Ind*MAX_HISTORY_NEIGH+newIndHistory) = wallInd;
-                                            newIndHistory += 1;
-                                            hasCollidedBefore = true;
-                                            break;
-                                        }
-                                    }
-
-                                    if (hasCollidedBefore == false){
-                                        deltat = vt*dt;
+                                vtNorm = vt.norm();
+                                hasCollidedBefore = false;
+                                indHistory = -1;
+                                for (int j=0; j<particles_.numCollisionHistoryWall(p1Ind); j++){
+                                    if (particles_.collisionHistoryWall(p1Ind,j) == wallInd){
+                                        indHistory=j;
+                                        deltatOldNorm = particles_.deltatHistoryWall.col(p1Ind*MAX_HISTORY_NEIGH+indHistory).norm();
                                         tangentialUnit = vt/(vtNorm+smallNum);
-                                        particles_.deltatHistoryNewWall.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory)=deltat;
-                                        particles_.collisionHistoryNewWall(p1Ind*MAX_HISTORY_NEIGH+newIndHistory) = wallInd;
-                                        newIndHistory += 1;
+                                        deltat = tangentialUnit*deltatOldNorm;
+                                        deltat = deltat+vt*dt;
+
+                                        particles_.deltatHistoryWall.col(p1Ind*MAX_HISTORY_NEIGH+indHistory)=deltat;
+                                        hasCollidedBefore = true;
+                                        break;
                                     }
-
-
-                                    ft = this->getTangentialForce(deltat,vt,this->etaWall_);
-
-
-                                    ftNorm = ft.norm();
-                                    fnNorm = fn.norm();
-
-
-                                    if (ftNorm > mu_*fnNorm){
-                                        if (hasCollidedBefore == true){
-                                            particles_.deltatHistoryNewWall.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory-1)=tmpDeltatWall.col(p1Ind*MAX_HISTORY_NEIGH+indHistory);
-                                            ft = -mu_*fnNorm*tangentialUnit;
-                                        }else{
-                                            particles_.deltatHistoryNewWall.col(p1Ind*MAX_HISTORY_NEIGH+newIndHistory-1)=zeroVec;
-                                            ft = -mu_*fnNorm*tangentialUnit;
-                                        }
-                                    }
-
-
-
-                                    //will be divided by mass later
-                                    particles_.acc.col(p1Ind) = particles_.acc.col(p1Ind) + ft;
-
-
-
-                                    //add rotation
-                                    mom = getMoment(normal,particles_,p1Ind,ft);
-                                    //will be divided by moment of intertia later
-                                    particles_.aw.col(p1Ind) = particles_.aw.col(p1Ind) + mom;
-
-
-
                                 }
-                                wallCountInCell+=1;
-                                wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell];// check next wall in cell
-                                //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
+
+                                if (hasCollidedBefore == false){
+                                    deltat = vt*dt;
+                                    tangentialUnit = vt/(vtNorm+smallNum);
+                                    int newInd = particles_.numCollisionHistoryWall(p1Ind);
+                                    particles_.deltatHistoryWall.col(p1Ind*MAX_HISTORY_NEIGH+newInd)=deltat;
+                                    particles_.collisionHistoryWall(p1Ind*MAX_HISTORY_NEIGH+newInd) = wallInd;
+                                    particles_.collisionFlagWall(p1Ind*MAX_HISTORY_NEIGH+newInd) = 1;
+                                    particles_.numCollisionHistoryWall(p1Ind)+=1;
+                                }
+
+
+                                ft = this->getTangentialForce(deltat,vt,this->etaWall_);
+
+
+                                ftNorm = ft.norm();
+                                fnNorm = fn.norm();
+
+
+                                if (ftNorm > mu_*fnNorm){
+                                    if (hasCollidedBefore == true){
+                                        ft = -mu_*fnNorm*tangentialUnit;
+                                    }else{
+                                        particles_.deltatHistoryWall.col(p1Ind*MAX_HISTORY_NEIGH+particles_.getNumCollisionHistoryWall()(p1Ind)-1)=zeroVec;
+                                        ft = -mu_*fnNorm*tangentialUnit;
+                                    }
+                                }
+
+
+
+                                //will be divided by mass later
+                                particles_.acc.col(p1Ind) = particles_.acc.col(p1Ind) + ft;
+
+
+
+                                //add rotation
+                                mom = getMoment(normal,particles_,p1Ind,ft);
+                                //will be divided by moment of intertia later
+                                particles_.aw.col(p1Ind) = particles_.aw.col(p1Ind) + mom;
+
+
+
                             }
+                            wallCountInCell+=1;
+                            wallInd = box_.triangleList[cellInd*box_.num_max_triangle+wallCountInCell];// check next wall in cell
+                                                                                                       //std::cout << "wallInd refreshed as " << wallInd<< std::endl;
+                        }
                     }
                 }
             }
 
-            particles_.numCollisionHistoryNewWall(p1Ind) = newIndHistory;
 
-            //update the history
 
 
 
@@ -365,16 +365,39 @@ void demCalc::getAcc(double dt){
             //std::cout << "acc = " << demCalc1.getParticle(i).acc[0] <<" " << demCalc1.getParticle(i).acc[1]<< " " << demCalc1.getParticle(i).acc[2] << std::endl;
         }
     }
-    particles_.deltatHistory = particles_.deltatHistoryNew;
-    particles_.collisionHistory = particles_.collisionHistoryNew;
-    particles_.deltatHistoryWall = particles_.deltatHistoryNewWall;
-    particles_.collisionHistoryWall = particles_.collisionHistoryNewWall;
-    //add source term and divide by mass inverse
 
+
+    //add source term and divide by mass inverse
     for (int p1Ind=0; p1Ind<numPart; p1Ind++){
         particles_.acc.col(p1Ind) = particles_.getAcc().col(p1Ind)*particles_.massInv()(p1Ind) + gravSource_;
         particles_.aw.col(p1Ind) = particles_.aw.col(p1Ind)*particles_.moiInv()(p1Ind);
     }
+
+    //refresh history
+    for (int p1Ind=0; p1Ind<numPart; p1Ind++){
+        for (int indHis=0; indHis<particles_.numCollisionHistory(p1Ind); indHis++){
+            if(particles_.collisionFlag(p1Ind*MAX_HISTORY_NEIGH+indHis)==0){
+                int last = particles_.getNumCollisionHistory()(p1Ind)-1;
+                particles_.deltatHistory.col(p1Ind*MAX_HISTORY_NEIGH+indHis)=particles_.deltatHistory.col(p1Ind*MAX_HISTORY_NEIGH+last);
+                particles_.collisionHistory(p1Ind*MAX_HISTORY_NEIGH+indHis)=particles_.collisionHistory(p1Ind*MAX_HISTORY_NEIGH+last);
+                particles_.collisionFlag(p1Ind*MAX_HISTORY_NEIGH+indHis)=particles_.collisionFlag(p1Ind*MAX_HISTORY_NEIGH+last);
+                particles_.numCollisionHistory(p1Ind)-=1;
+
+            }
+        }
+
+        for (int indHis=0; indHis<particles_.numCollisionHistoryWall(p1Ind); indHis++){
+            if(particles_.collisionFlagWall(p1Ind*MAX_HISTORY_NEIGH+indHis)==0){
+                int last = particles_.getNumCollisionHistoryWall()(p1Ind)-1;
+                particles_.deltatHistoryWall.col(p1Ind*MAX_HISTORY_NEIGH+indHis)=particles_.deltatHistoryWall.col(p1Ind*MAX_HISTORY_NEIGH+last);
+                particles_.collisionHistoryWall(p1Ind*MAX_HISTORY_NEIGH+indHis)=particles_.collisionHistoryWall(p1Ind*MAX_HISTORY_NEIGH+last);
+                particles_.collisionFlagWall(p1Ind*MAX_HISTORY_NEIGH+indHis)=particles_.collisionFlagWall(p1Ind*MAX_HISTORY_NEIGH+last);
+                particles_.numCollisionHistoryWall(p1Ind)-=1;
+
+            }
+        }
+    }
+
 }
 
 void demCalc::showNumPartInCell(){
@@ -552,12 +575,12 @@ void demCalc::refreshLinkedList(){
             cellIniPart_[ind] = i;
         }else{
             /*
-            indLast = cellIniPart_[ind];
-            while (linkedList_[indLast]!=-1){
-                indLast = linkedList_[indLast];
-            }
-            linkedList_[indLast] = i;
-            */
+               indLast = cellIniPart_[ind];
+               while (linkedList_[indLast]!=-1){
+               indLast = linkedList_[indLast];
+               }
+               linkedList_[indLast] = i;
+               */
 
             linkedList_[i] = cellIniPart_[ind];
             cellIniPart_[ind]=i;

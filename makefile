@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -O3  -g -mtune=native -march=native -fopenmp -pg
+CFLAGS = -O3  -g  -mtune=native -march=native -fopenmp  -fno-math-errno
 LIBS = -lm 
 OBJS = main.o particleGroup.o demCalc.o readFiles.o particle.o boundingBox.o triangles.o fileOutput.o timeAdvTest.o
 PROGRAM = myDEM3d

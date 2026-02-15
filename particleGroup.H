@@ -21,6 +21,8 @@ class particleGroup{
         MatrixXi collisionHistoryNew;
         MatrixXi numCollisionHistory;
         MatrixXi numCollisionHistoryWall;
+        MatrixXi collisionFlag;
+        MatrixXi collisionFlagWall;
         MatrixXd deltatHistory;
         MatrixXd deltatHistoryNew;
 
